@@ -1,8 +1,7 @@
-
 from sqlalchemy.orm import Session
 
-from app.models.user import User
 from app.core.security import get_password_hash
+from app.models.user import User
 
 
 def init_db(db: Session) -> None:

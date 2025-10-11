@@ -1,9 +1,7 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db_dep
-from app.models.item import Item
 from app.repositories.item_repo import ItemRepository
 from app.schemas.item import ItemCreate, ItemPublic, ItemUpdate
 
@@ -23,7 +21,12 @@ def create_item(
     db: Session = Depends(get_db_dep),
 ):
     repo = ItemRepository()
-    return repo.create(db, title=item_in.title, description=item_in.description, owner_id=current_user.id)
+    return repo.create(
+        db,
+        title=item_in.title,
+        description=item_in.description,
+        owner_id=current_user.id,
+    )
 
 
 @router.put("/{item_id}", response_model=ItemPublic)
@@ -36,7 +39,9 @@ def update_item(
     repo = ItemRepository()
     obj = repo.get(db, item_id)
     if not obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
+        )
     if obj.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     return repo.update(db, obj, title=item_in.title, description=item_in.description)

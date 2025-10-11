@@ -1,6 +1,6 @@
 
 [project]
-name = "fastapi-enterprise-template"
+name = "fastapi-template"
 version = "0.1.0"
 description = "Production-grade FastAPI template (SQLAlchemy, Alembic, JWT, RBAC, tests)"
 requires-python = ">=3.10,<4.0"
@@ -16,7 +16,6 @@ dependencies = [
   "passlib[bcrypt]>=1.7",
   "pyjwt>=2.8",
   "email-validator>=2.2",
-  "ruff>=0.6",
   "black>=24.8.0",
   "isort>=5.13.2",
   "loguru>=0.7",
@@ -31,6 +30,7 @@ dev = [
   "coverage>=7.6",
   "requests>=2.32",
   "faker>=26.0",
+  "ruff>=0.6",
 ]
 
 [tool.ruff]

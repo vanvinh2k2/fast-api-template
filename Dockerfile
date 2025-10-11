@@ -1,22 +1,45 @@
+FROM python:3.12-slim AS builder
 
-FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1
-
-# System deps
-RUN apt-get update && apt-get install -y build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev curl \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# uv (fast package manager)
-RUN pip install --no-cache-dir uv
+# Install uv
+RUN pip install --no-cache-dir --upgrade pip uv
 
-# Project files
 COPY pyproject.toml ./
-RUN uv sync --frozen --no-dev
 
+RUN uv venv /venv
+RUN uv sync --no-dev --python /venv/bin/python
+
+# Copy source code
 COPY . .
-RUN uv sync --no-cache
 
-EXPOSE 8000
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN /venv/bin/python -c "import alembic, sys; print('alembic OK in', sys.executable)"
+
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH="/app" \
+    PATH="/venv/bin:$PATH"
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir uv
+COPY --from=builder /venv /venv
+COPY . .
+
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 80
+ENTRYPOINT ["/entrypoint.sh", "80"]

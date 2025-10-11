@@ -1,30 +1,27 @@
-
 from functools import lru_cache
 from typing import List
 
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, TypeAdapter
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "FastAPI Enterprise Template"
-
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/app"
-
-    SECRET_KEY: str = "change_me"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 3
-
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
-
+    PROJECT_NAME: str = "FastAPI Template"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@db:5432/app"
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    BACKEND_CORS_ORIGINS: str
     ENVIRONMENT: str = "local"
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def split_cors(cls, v):
-        if isinstance(v, str) and v:
-            return [i.strip() for i in v.split(",")]
-        return v
+    @property
+    def cors_origins(self) -> List[str]:
+        raw = (self.BACKEND_CORS_ORIGINS or "").strip()
+        if not raw:
+            return []
+        items = [data.strip() for data in raw.split(",") if data.strip()]
+        validated = TypeAdapter(List[AnyHttpUrl]).validate_python(items)
+        return [str(u) for u in validated]
 
     model_config = {
         "env_file": ".env",
