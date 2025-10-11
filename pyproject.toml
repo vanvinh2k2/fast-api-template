@@ -22,7 +22,7 @@ dependencies = [
   "python-dotenv>=1.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
   "pytest>=8.2",
   "pytest-asyncio>=0.24",
@@ -39,3 +39,7 @@ target-version = "py312"
 
 [tool.isort]
 profile = "black"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
