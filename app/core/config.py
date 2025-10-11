@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "FastAPI Template"
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@db:5432/app"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/app"
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: str
