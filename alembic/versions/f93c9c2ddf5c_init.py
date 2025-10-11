@@ -12,17 +12,11 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("id", sa.Integer, primary_key=True, index=True),
-        sa.Column(
-            "email", sa.String(length=255), nullable=False, unique=True, index=True
-        ),
+        sa.Column("email", sa.String(length=255), nullable=False, unique=True, index=True),
         sa.Column("full_name", sa.String(length=255), nullable=True),
         sa.Column("hashed_password", sa.String(length=255), nullable=False),
-        sa.Column(
-            "is_active", sa.Boolean, nullable=False, server_default=sa.text("TRUE")
-        ),
-        sa.Column(
-            "is_superuser", sa.Boolean, nullable=False, server_default=sa.text("FALSE")
-        ),
+        sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.text("TRUE")),
+        sa.Column("is_superuser", sa.Boolean, nullable=False, server_default=sa.text("FALSE")),
     )
     op.create_table(
         "items",

@@ -24,10 +24,6 @@ class AuthService:
         expire = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         return create_access_token(user_id, expire)
 
-    def register(
-        self, db: Session, *, email: str, full_name: str | None, password: str
-    ) -> User:
+    def register(self, db: Session, *, email: str, full_name: str | None, password: str) -> User:
         hashed = get_password_hash(password)
-        return self.user_repo.create(
-            db, email=email, full_name=full_name, hashed_password=hashed
-        )
+        return self.user_repo.create(db, email=email, full_name=full_name, hashed_password=hashed)

@@ -39,9 +39,7 @@ def update_item(
     repo = ItemRepository()
     obj = repo.get(db, item_id)
     if not obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
     if obj.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     return repo.update(db, obj, title=item_in.title, description=item_in.description)
