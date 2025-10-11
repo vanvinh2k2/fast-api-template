@@ -1,8 +1,7 @@
-
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-import jwt
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -15,7 +14,9 @@ def get_db_dep(db: Session = Depends(get_db)):
     return db
 
 
-def get_current_user(db: Session = Depends(get_db_dep), token: str = Depends(oauth2_scheme)) -> User:
+def get_current_user(
+    db: Session = Depends(get_db_dep), token: str = Depends(oauth2_scheme)
+) -> User:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         user_id: int = int(payload.get("sub"))

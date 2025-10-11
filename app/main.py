@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,7 +11,11 @@ app = FastAPI(title=settings.PROJECT_NAME)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS or ["*"] if settings.ENVIRONMENT == "local" else settings.BACKEND_CORS_ORIGINS,
+    allow_origins=(
+        settings.BACKEND_CORS_ORIGINS or ["*"]
+        if settings.ENVIRONMENT == "local"
+        else settings.BACKEND_CORS_ORIGINS
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

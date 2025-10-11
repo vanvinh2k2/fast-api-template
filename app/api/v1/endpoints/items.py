@@ -1,9 +1,7 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db_dep
-from app.models.item import Item
 from app.repositories.item_repo import ItemRepository
 from app.schemas.item import ItemCreate, ItemPublic, ItemUpdate
 
@@ -23,7 +21,12 @@ def create_item(
     db: Session = Depends(get_db_dep),
 ):
     repo = ItemRepository()
-    return repo.create(db, title=item_in.title, description=item_in.description, owner_id=current_user.id)
+    return repo.create(
+        db,
+        title=item_in.title,
+        description=item_in.description,
+        owner_id=current_user.id,
+    )
 
 
 @router.put("/{item_id}", response_model=ItemPublic)
