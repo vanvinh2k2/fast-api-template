@@ -7,7 +7,6 @@ __pycache__/
 .venv/
 venv/
 .env
-.env.*
 .pytest_cache/
 .mypy_cache/
 .coverage
