@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS builder
+FROM python:3.13-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -22,7 +22,7 @@ COPY . .
 
 RUN /venv/bin/python -c "import alembic, sys; print('alembic OK in', sys.executable)"
 
-FROM python:3.12-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -38,8 +38,7 @@ RUN pip install --no-cache-dir uv
 COPY --from=builder /venv /venv
 COPY . .
 
-COPY ./entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 80
-ENTRYPOINT ["/entrypoint.sh", "80"]
+ENTRYPOINT ["/app/entrypoint.sh", "80"]

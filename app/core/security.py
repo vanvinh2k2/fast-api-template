@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
+from uuid import uuid4
 
 import jwt
-from passlib.context import CryptContext
-from uuid import uuid4
+from argon2 import PasswordHasher
+from argon2.exceptions import Argon2Error
 
 from app.core.config import settings
 from app.schemas.auth import TokenPayload
+
+password_hasher = PasswordHasher()
 
 
 def _create_token(
@@ -50,10 +53,12 @@ def decode_token(
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    pwd_context = CryptContext(schemes=["argon2", "bcrypt_sha256", "bcrypt"], deprecated="auto")
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        password_hasher.verify(hashed_password, plain_password)
+    except Argon2Error:
+        return False
+    return True
 
 
 def get_password_hash(password: str) -> str:
-    pwd_context = CryptContext(schemes=["argon2", "bcrypt_sha256", "bcrypt"], deprecated="auto")
-    return pwd_context.hash(password)
+    return password_hasher.hash(password)
