@@ -3,7 +3,7 @@
 name = "fastapi-template"
 version = "0.1.0"
 description = "Production-grade FastAPI template (SQLAlchemy, Alembic, JWT, RBAC, tests)"
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.13,<4.0"
 dependencies = [
   "fastapi>=0.114,<1.0",
   "uvicorn[standard]>=0.30",
@@ -13,14 +13,13 @@ dependencies = [
   "psycopg2-binary>=2.9",
   "SQLAlchemy>=2.0",
   "alembic>=1.13",
-  "passlib[bcrypt]>=1.7",
+  "argon2-cffi>=25.1.0",
   "pyjwt>=2.8",
   "email-validator>=2.2",
   "black>=24.8.0",
   "isort>=5.13.2",
   "loguru>=0.7",
   "python-dotenv>=1.0",
-  "argon2-cffi>=25.1.0",
 ]
 
 [dependency-groups]
@@ -36,7 +35,7 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py313"
 
 [tool.isort]
 profile = "black"
