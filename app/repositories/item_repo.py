@@ -15,7 +15,7 @@ class ItemRepository:
     def create(self, db: Session, *, title: str, description: str | None, owner_id: int) -> Item:
         obj = Item(title=title, description=description, owner_id=owner_id)
         db.add(obj)
-        db.commit()
+        db.flush()
         db.refresh(obj)
         return obj
 
@@ -25,10 +25,10 @@ class ItemRepository:
         if description is not None:
             obj.description = description
         db.add(obj)
-        db.commit()
+        db.flush()
         db.refresh(obj)
         return obj
 
     def delete(self, db: Session, obj: Item) -> None:
         db.delete(obj)
-        db.commit()
+        db.flush()

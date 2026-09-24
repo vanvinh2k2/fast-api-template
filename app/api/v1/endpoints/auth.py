@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_dep
-from app.schemas.auth import TokenPair, RefreshIn
-from app.services.auth_service import AuthService
-from app.schemas.auth import LoginRequest
-from app.core.security import create_access_token, create_refresh_token, decode_token
+from app.schemas.auth import LoginRequest, RefreshIn, TokenPair
+from app.services.auth_service import AuthService, InactiveUserError, InvalidRefreshTokenError
 
 router = APIRouter()
 
@@ -22,18 +21,21 @@ def login(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect email or password",
         )
-    return TokenPair(
-        access_token=create_access_token(user.id), refresh_token=create_refresh_token(user.id)
-    )
+    return svc.issue_token_pair(db, user_id=user.id)
 
 
 @router.post("/refresh", response_model=TokenPair)
-def refresh_token(body: RefreshIn):
+def refresh_token(body: RefreshIn, db: Session = Depends(get_db_dep)):
+    svc = AuthService()
     try:
-        payload = decode_token(body.refresh_token, expected_type="refresh")
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token"
+        return svc.rotate_refresh_token(db, refresh_token=body.refresh_token)
+    except InvalidRefreshTokenError:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Invalid or expired refresh token"},
         )
-    uid = payload.user_id
-    return TokenPair(access_token=create_access_token(uid), refresh_token=create_refresh_token(uid))
+    except InactiveUserError:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "User inactive"},
+        )

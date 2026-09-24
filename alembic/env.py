@@ -12,6 +12,7 @@ from app.db.base import Base
 
 from app.models.user import User  # noqa: F401
 from app.models.item import Item  # noqa: F401
+from app.models.refresh_token import RefreshToken, RefreshTokenFamily  # noqa: F401
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:

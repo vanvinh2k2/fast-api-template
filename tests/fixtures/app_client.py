@@ -5,12 +5,17 @@ from tests.fixtures.db import TestingSessionLocal
 from app.api.deps import get_db_dep
 from app.main import app
 
+
 @pytest.fixture()
 def client():
     def _override_get_db():
         db = TestingSessionLocal()
         try:
             yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 

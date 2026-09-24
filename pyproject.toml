@@ -16,8 +16,6 @@ dependencies = [
   "argon2-cffi>=25.1.0",
   "pyjwt>=2.8",
   "email-validator>=2.2",
-  "black>=24.8.0",
-  "isort>=5.13.2",
   "loguru>=0.7",
   "python-dotenv>=1.0",
 ]
@@ -36,9 +34,6 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-
-[tool.isort]
-profile = "black"
 
 [tool.setuptools.packages.find]
 where = ["."]

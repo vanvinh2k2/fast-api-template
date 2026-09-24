@@ -10,6 +10,8 @@ from app.core.config import settings
 from app.schemas.auth import TokenPayload
 
 password_hasher = PasswordHasher()
+JWT_ISSUER = "auth-service"
+JWT_AUDIENCE = "api"
 
 
 def _create_token(
@@ -17,9 +19,11 @@ def _create_token(
 ) -> str:
     now = datetime.now(timezone.utc)
     payload = {
-        "token_type": token_type,
-        "user_id": int(user_id),
+        "sub": str(user_id),
+        "type": token_type,
         "jti": str(uuid4()),
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
         "iat": int(now.timestamp()),
         "exp": int((now + exp_delta).timestamp()),
     }
@@ -45,9 +49,16 @@ def create_refresh_token(user_id: int) -> str:
 def decode_token(
     token: str, *, expected_type: Optional[Literal["access", "refresh"]] = None
 ) -> TokenPayload:
-    data = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    data = jwt.decode(
+        token,
+        settings.SECRET_KEY,
+        algorithms=[settings.JWT_ALGORITHM],
+        issuer=JWT_ISSUER,
+        audience=JWT_AUDIENCE,
+        options={"require": ["sub", "type", "jti", "iss", "aud", "iat", "exp"]},
+    )
     payload = TokenPayload(**data)
-    if expected_type and payload.token_type != expected_type:
+    if expected_type and payload.type != expected_type:
         raise ValueError("Invalid token type")
     return payload
 

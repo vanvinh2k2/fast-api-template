@@ -17,6 +17,6 @@ class UserRepository:
     ) -> User:
         obj = User(email=email, full_name=full_name, hashed_password=hashed_password)
         db.add(obj)
-        db.commit()
+        db.flush()
         db.refresh(obj)
         return obj

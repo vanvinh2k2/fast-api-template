@@ -6,7 +6,7 @@ A pragmatic, production-ready project layout many companies use:
 - **JWT auth** (password flow) + **RBAC** scaffolding
 - **Pydantic v2** settings + 12-factor `.env`
 - **Dockerfile** + **docker-compose** (Postgres, API)
-- Linting/format: **ruff**, **black**, **isort** + **pre-commit**
+- Linting/format: **ruff** + **pre-commit**
 - Basic **pytest** tests
 
 > Why sync SQLAlchemy? It's the most common deployment in many teams, simpler to operate, and integrates well with Alembic.

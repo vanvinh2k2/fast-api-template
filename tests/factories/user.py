@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.core.security import get_password_hash
 
+
 def make_user(
     db,
     *,

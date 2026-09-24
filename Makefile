@@ -10,7 +10,6 @@ lint:
 fmt:
 	uv run ruff check --fix .
 	uv run ruff format .
-	uv run isort .
 
 test:
 	uv run pytest -q
@@ -22,4 +21,4 @@ upgrade:
 	uv run alembic upgrade head
 
 compose:
-	docker compose up -d
+	docker compose up -d --build
