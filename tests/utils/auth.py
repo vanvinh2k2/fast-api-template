@@ -1,5 +1,6 @@
 from typing import Tuple
 
+
 def login(client, username: str, password: str) -> Tuple[str, str]:
     resp = client.post(
         "/api/v1/auth/login",

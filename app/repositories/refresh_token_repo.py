@@ -24,11 +24,7 @@ class RefreshTokenRepository:
         return obj
 
     def get_family(self, db: Session, family_id: int) -> Optional[RefreshTokenFamily]:
-        return (
-            db.query(RefreshTokenFamily)
-            .filter(RefreshTokenFamily.id == family_id)
-            .first()
-        )
+        return db.query(RefreshTokenFamily).filter(RefreshTokenFamily.id == family_id).first()
 
     def get_by_jti(self, db: Session, jti: str) -> Optional[RefreshToken]:
         return db.query(RefreshToken).filter(RefreshToken.jti == jti).first()
