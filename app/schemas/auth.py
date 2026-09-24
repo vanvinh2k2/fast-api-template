@@ -12,9 +12,11 @@ class RefreshIn(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    token_type: Literal["access", "refresh"]
-    user_id: int
+    sub: str
+    type: Literal["access", "refresh"]
     jti: str
+    iss: str
+    aud: str
     iat: int
     exp: int
 

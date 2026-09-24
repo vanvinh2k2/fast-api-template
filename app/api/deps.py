@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_token
 from app.core.database import get_db
 from app.models.user import User
+from app.services.user_service import UserService
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -29,18 +30,31 @@ def get_current_user_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired access token",
         )
-    request.state.actor_id = payload.user_id
-    return payload.user_id
+    try:
+        user_id = int(payload.sub)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+        )
+    request.state.actor_id = user_id
+    return user_id
 
 
 def get_current_user(
     db: Session = Depends(get_db_dep),
     user_id: int = Depends(get_current_user_id),
 ) -> User:
-    user = db.get(User, user_id)
+    service = UserService()
+    user = service.get_current_user(db, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User inactive",
         )
     return user
