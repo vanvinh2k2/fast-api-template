@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import delete
 
 from app.models.item import Item
 from app.models.user import User
@@ -8,16 +9,16 @@ from tests.utils.auth import login
 
 @pytest.fixture(autouse=True)
 def clean_items(db_session):
-    db_session.query(Item).delete()
-    db_session.query(User).delete()
+    db_session.execute(delete(Item))
+    db_session.execute(delete(User))
     db_session.commit()
     yield
-    db_session.query(Item).delete()
-    db_session.query(User).delete()
+    db_session.execute(delete(Item))
+    db_session.execute(delete(User))
     db_session.commit()
 
 
-def auth_headers(client, db_session, *, email: str = "user@example.com") -> dict[str, str]:
+def auth_headers(client, db_session, email: str = "user@example.com") -> dict[str, str]:
     make_user(db_session, email=email, password="secret")
     db_session.commit()
 
@@ -35,9 +36,37 @@ def test_list_items_returns_items(client, db_session):
 
     assert response.status_code == 200
     data = response.json()
-    assert [item["title"] for item in data] == ["Second", "First"]
-    assert data[0]["description"] == "Two"
-    assert data[0]["owner_id"] == user.id
+    assert data["count"] == 2
+    assert data["next"] is None
+    assert data["previous"] is None
+    assert [item["title"] for item in data["results"]] == ["Second", "First"]
+    assert data["results"][0]["description"] == "Two"
+    assert data["results"][0]["owner_id"] == user.id
+
+
+def test_list_items_returns_paginated_response(client, db_session):
+    user = make_user(db_session, email="paginated-items@example.com")
+    for title in ["First", "Second", "Third"]:
+        db_session.add(Item(title=title, description=None, owner_id=user.id))
+    db_session.commit()
+
+    first_page = client.get("/api/v1/items?limit=2&offset=0")
+
+    assert first_page.status_code == 200
+    first_data = first_page.json()
+    assert first_data["count"] == 3
+    assert first_data["previous"] is None
+    assert first_data["next"] == "http://testserver/api/v1/items?limit=2&offset=2"
+    assert [item["title"] for item in first_data["results"]] == ["Third", "Second"]
+
+    second_page = client.get("/api/v1/items?limit=2&offset=2")
+
+    assert second_page.status_code == 200
+    second_data = second_page.json()
+    assert second_data["count"] == 3
+    assert second_data["next"] is None
+    assert second_data["previous"] == "http://testserver/api/v1/items?limit=2&offset=0"
+    assert [item["title"] for item in second_data["results"]] == ["First"]
 
 
 def test_create_item_requires_authentication(client):
@@ -59,7 +88,7 @@ def test_create_item_returns_created_item(client, db_session):
         headers=headers,
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["id"] is not None
     assert data["title"] == "Created item"

@@ -1,4 +1,5 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+from app.schemas.base import ORMModel
 
 
 class ItemBase(BaseModel):
@@ -6,17 +7,11 @@ class ItemBase(BaseModel):
     description: str | None = None
 
 
-class ItemCreate(ItemBase):
-    pass
-
-
 class ItemUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
 
 
-class ItemPublic(ItemBase):
+class ItemPublic(ItemBase, ORMModel):
     id: int
     owner_id: int
-
-    model_config = ConfigDict(from_attributes=True)

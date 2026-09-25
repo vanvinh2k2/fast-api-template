@@ -1,72 +1,53 @@
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.refresh_token import RefreshToken, RefreshTokenFamily
+from app.repositories.base import BaseRepository
 
 
-class RefreshTokenRepository:
+class RefreshTokenRepository(BaseRepository[RefreshToken]):
+    def __init__(self, db: Session) -> None:
+        super().__init__(db, RefreshToken)
+        self.family_repo = BaseRepository(db, RefreshTokenFamily)
+
     def create_family(
         self,
-        db: Session,
-        *,
         user_id: int,
         expires_at: datetime,
     ) -> RefreshTokenFamily:
-        obj = RefreshTokenFamily(
-            user_id=user_id,
-            expires_at=expires_at,
-        )
-        db.add(obj)
-        db.flush()
-        db.refresh(obj)
-        return obj
+        return self.family_repo.create(user_id=user_id, expires_at=expires_at)
 
-    def get_family(self, db: Session, family_id: int) -> Optional[RefreshTokenFamily]:
-        return db.query(RefreshTokenFamily).filter(RefreshTokenFamily.id == family_id).first()
+    def get_family(self, family_id: int) -> Optional[RefreshTokenFamily]:
+        return self.db.scalar(select(RefreshTokenFamily).where(RefreshTokenFamily.id == family_id))
 
-    def get_by_jti(self, db: Session, jti: str) -> Optional[RefreshToken]:
-        return db.query(RefreshToken).filter(RefreshToken.jti == jti).first()
+    def get_by_jti(self, jti: str) -> Optional[RefreshToken]:
+        return self.db.scalar(select(RefreshToken).where(RefreshToken.jti == jti))
 
     def create(
         self,
-        db: Session,
-        *,
         family_id: int,
         jti: str,
         expires_at: datetime,
     ) -> RefreshToken:
-        obj = RefreshToken(family_id=family_id, jti=jti, expires_at=expires_at)
-        db.add(obj)
-        db.flush()
-        db.refresh(obj)
-        return obj
+        return super().create(family_id=family_id, jti=jti, expires_at=expires_at)
 
     def revoke(
         self,
-        db: Session,
         obj: RefreshToken,
-        *,
         revoked_at: datetime,
         replaced_by_jti: str | None = None,
     ) -> RefreshToken:
         obj.revoked_at = revoked_at
         obj.replaced_by_jti = replaced_by_jti
-        db.add(obj)
-        db.flush()
-        db.refresh(obj)
-        return obj
+        return self.save(obj)
 
     def revoke_family(
         self,
-        db: Session,
         obj: RefreshTokenFamily,
-        *,
         revoked_at: datetime,
     ) -> RefreshTokenFamily:
         obj.revoked_at = revoked_at
-        db.add(obj)
-        db.flush()
-        db.refresh(obj)
-        return obj
+        return self.family_repo.save(obj)

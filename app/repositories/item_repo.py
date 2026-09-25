@@ -1,34 +1,27 @@
-from typing import List, Optional
+from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
 from app.models.item import Item
+from app.repositories.base import BaseRepository
 
 
-class ItemRepository:
-    def list(self, db: Session) -> List[Item]:
-        return db.query(Item).order_by(Item.id.desc()).all()
+class ItemRepository(BaseRepository[Item]):
+    def __init__(self, db: Session) -> None:
+        super().__init__(db, Item)
 
-    def get(self, db: Session, item_id: int) -> Optional[Item]:
-        return db.query(Item).filter(Item.id == item_id).first()
+    def list(self, offset: int = 0, limit: int = 100) -> list[Item]:
+        return super().list(offset=offset, limit=limit, order_by=Item.id.desc())
 
-    def create(self, db: Session, *, title: str, description: str | None, owner_id: int) -> Item:
-        obj = Item(title=title, description=description, owner_id=owner_id)
-        db.add(obj)
-        db.flush()
-        db.refresh(obj)
-        return obj
+    def list_with_count(self, offset: int = 0, limit: int = 100) -> tuple[list[Item], int]:
+        return self.list(offset=offset, limit=limit), self.count()
 
-    def update(self, db: Session, obj: Item, *, title: str | None, description: str | None) -> Item:
+    def create(self, title: str, description: str | None, owner_id: int) -> Item:
+        return super().create(title=title, description=description, owner_id=owner_id)
+
+    def update(self, obj: Item, title: str | None, description: str | None) -> Item:
         if title is not None:
             obj.title = title
         if description is not None:
             obj.description = description
-        db.add(obj)
-        db.flush()
-        db.refresh(obj)
-        return obj
-
-    def delete(self, db: Session, obj: Item) -> None:
-        db.delete(obj)
-        db.flush()
+        return self.save(obj)

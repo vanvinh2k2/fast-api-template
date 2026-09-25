@@ -4,7 +4,6 @@ from app.core.security import get_password_hash
 
 def make_user(
     db,
-    *,
     email: str = "user@example.com",
     password: str = "secret",
     is_active: bool = True,
