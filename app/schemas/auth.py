@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator, Field
 from typing import Literal
+from uuid import UUID
 
 from app.schemas.base import ORMModel
 
@@ -47,8 +48,8 @@ class UserCreate(BaseModel):
         return value
 
 
-class UserPublic(ORMModel):
-    id: int
+class UserResponse(ORMModel):
+    id: UUID
     email: EmailStr
     full_name: str | None = None
     is_active: bool

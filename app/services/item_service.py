@@ -1,3 +1,7 @@
+from collections.abc import Mapping
+
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from app.core.error_codes import ErrorCode
@@ -8,15 +12,30 @@ from app.repositories.item_repo import ItemRepository
 
 
 class ItemService:
-    def list_items(self, db: Session, offset: int = 0, limit: int = 100) -> tuple[list[Item], int]:
-        return ItemRepository(db).list_with_count(offset=offset, limit=limit)
+    def list_items(
+        self,
+        db: Session,
+        offset: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        ordering: str | None = None,
+        query_params: Mapping[str, str] | None = None,
+    ) -> tuple[list[Item], int]:
+        item_repo = ItemRepository(db)
+        return item_repo.list_with_count(
+            offset=offset,
+            limit=limit,
+            search=search,
+            filters=item_repo.extract_filters(query_params or {}),
+            ordering=ordering,
+        )
 
     def create_item(
         self,
         db: Session,
         title: str,
         description: str | None,
-        owner_id: int,
+        owner_id: UUID,
     ) -> Item:
         return ItemRepository(db).create(
             title=title,
@@ -27,7 +46,7 @@ class ItemService:
     def update_item(
         self,
         db: Session,
-        item_id: int,
+        item_id: UUID,
         title: str | None,
         description: str | None,
         actor: User,
@@ -39,7 +58,7 @@ class ItemService:
         self._ensure_can_modify(item, actor)
         return item_repo.update(item, title=title, description=description)
 
-    def delete_item(self, db: Session, item_id: int, actor: User) -> None:
+    def delete_item(self, db: Session, item_id: UUID, actor: User) -> None:
         item_repo = ItemRepository(db)
         item = item_repo.get(item_id)
         if not item:

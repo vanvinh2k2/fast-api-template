@@ -1,5 +1,6 @@
 import jwt
 from sqlalchemy import select
+from uuid import UUID
 
 from app.core.config import settings
 from app.models.refresh_token import RefreshToken, RefreshTokenFamily
@@ -35,7 +36,7 @@ def test_access_token_uses_standard_claims(client, db_session):
         audience="api",
     )
 
-    assert payload["sub"].isdigit()
+    UUID(payload["sub"])
     assert payload["type"] == "access"
     assert payload["iss"] == "auth-service"
     assert payload["aud"] == "api"
@@ -178,6 +179,6 @@ def test_login_stores_refresh_token_family(client, db_session):
     family = db_session.get(RefreshTokenFamily, token.family_id)
 
     assert family is not None
-    assert family.user_id == int(payload["sub"])
+    assert family.user_id == UUID(payload["sub"])
     assert family.revoked_at is None
     assert token.revoked_at is None

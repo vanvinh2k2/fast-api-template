@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -17,7 +19,7 @@ def get_db_dep(db: Session = Depends(get_db)) -> Session:
 def get_current_user_id(
     request: Request,
     creds: HTTPAuthorizationCredentials = Depends(bearer),
-) -> int:
+) -> UUID:
     if not creds:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -31,7 +33,7 @@ def get_current_user_id(
             detail="Invalid or expired access token",
         )
     try:
-        user_id = int(payload.sub)
+        user_id = UUID(payload.sub)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -43,7 +45,7 @@ def get_current_user_id(
 
 def get_current_user(
     db: Session = Depends(get_db_dep),
-    user_id: int = Depends(get_current_user_id),
+    user_id: UUID = Depends(get_current_user_id),
 ) -> User:
     service = AuthService()
     user = service.get_current_user(db, user_id)

@@ -5,20 +5,20 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db_dep
 from app.core.exceptions import AuthError, ConflictError
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RefreshIn, TokenPair, UserCreate, UserPublic
+from app.schemas.auth import LoginRequest, RefreshIn, TokenPair, UserCreate, UserResponse
 from app.services.auth_service import AuthService
 
 router = APIRouter()
 
 
-@router.get("/me", response_model=UserPublic)
+@router.get("/me", response_model=UserResponse)
 def read_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
 @router.post(
     "/register",
-    response_model=UserPublic,
+    response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register new user",
 )
