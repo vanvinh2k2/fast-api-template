@@ -11,7 +11,7 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "users",
-        sa.Column("id", sa.Integer, primary_key=True, index=True),
+        sa.Column("id", sa.Uuid(), primary_key=True, index=True),
         sa.Column("email", sa.String(length=255), nullable=False, unique=True, index=True),
         sa.Column("full_name", sa.String(length=255), nullable=True),
         sa.Column("hashed_password", sa.String(length=255), nullable=False),
@@ -20,10 +20,10 @@ def upgrade() -> None:
     )
     op.create_table(
         "items",
-        sa.Column("id", sa.Integer, primary_key=True, index=True),
+        sa.Column("id", sa.Uuid(), primary_key=True, index=True),
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("description", sa.String(length=1024), nullable=True),
-        sa.Column("owner_id", sa.Integer, sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("owner_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
     )
 
 

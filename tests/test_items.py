@@ -32,7 +32,7 @@ def test_list_items_returns_items(client, db_session):
     db_session.add(Item(title="Second", description="Two", owner_id=user.id))
     db_session.commit()
 
-    response = client.get("/api/v1/items")
+    response = client.get("/api/v1/items?ordering=-title")
 
     assert response.status_code == 200
     data = response.json()
@@ -41,7 +41,6 @@ def test_list_items_returns_items(client, db_session):
     assert data["previous"] is None
     assert [item["title"] for item in data["results"]] == ["Second", "First"]
     assert data["results"][0]["description"] == "Two"
-    assert data["results"][0]["owner_id"] == user.id
 
 
 def test_list_items_returns_paginated_response(client, db_session):
@@ -50,23 +49,104 @@ def test_list_items_returns_paginated_response(client, db_session):
         db_session.add(Item(title=title, description=None, owner_id=user.id))
     db_session.commit()
 
-    first_page = client.get("/api/v1/items?limit=2&offset=0")
+    first_page = client.get("/api/v1/items?limit=2&offset=0&ordering=-title")
 
     assert first_page.status_code == 200
     first_data = first_page.json()
     assert first_data["count"] == 3
     assert first_data["previous"] is None
-    assert first_data["next"] == "http://testserver/api/v1/items?limit=2&offset=2"
+    assert first_data["next"] == "http://testserver/api/v1/items?ordering=-title&limit=2&offset=2"
     assert [item["title"] for item in first_data["results"]] == ["Third", "Second"]
 
-    second_page = client.get("/api/v1/items?limit=2&offset=2")
+    second_page = client.get("/api/v1/items?limit=2&offset=2&ordering=-title")
 
     assert second_page.status_code == 200
     second_data = second_page.json()
     assert second_data["count"] == 3
     assert second_data["next"] is None
-    assert second_data["previous"] == "http://testserver/api/v1/items?limit=2&offset=0"
+    assert (
+        second_data["previous"] == "http://testserver/api/v1/items?ordering=-title&limit=2&offset=0"
+    )
     assert [item["title"] for item in second_data["results"]] == ["First"]
+
+
+def test_list_items_filters_by_search(client, db_session):
+    user = make_user(db_session, email="search-items@example.com", full_name="Casey Owner")
+    db_session.add(Item(title="Alpha notebook", description="Paper notes", owner_id=user.id))
+    db_session.add(Item(title="Beta pencil", description="Graphite sketching", owner_id=user.id))
+    db_session.add(Item(title="Gamma folder", description="Plain documents", owner_id=user.id))
+    db_session.commit()
+
+    response = client.get("/api/v1/items?search=alpha")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 1
+    assert [item["title"] for item in data["results"]] == ["Alpha notebook"]
+
+
+def test_list_items_filters_by_owner_name(client, db_session):
+    owner = make_user(db_session, email="owner-search@example.com", full_name="Morgan Fields")
+    other = make_user(db_session, email="other-search@example.com", full_name="Jordan Rivers")
+    db_session.add(Item(title="Notebook", description=None, owner_id=owner.id))
+    db_session.add(Item(title="Notebook", description=None, owner_id=other.id))
+    db_session.commit()
+
+    response = client.get("/api/v1/items?search=morgan")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 1
+    assert data["results"][0]["owner_id"] == str(owner.id)
+
+
+def test_list_items_orders_by_title(client, db_session):
+    user = make_user(db_session, email="order-title@example.com")
+    for title in ["Charlie", "Bravo", "Alpha"]:
+        db_session.add(Item(title=title, description=None, owner_id=user.id))
+    db_session.commit()
+
+    response = client.get("/api/v1/items?ordering=title")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [item["title"] for item in data["results"]] == ["Alpha", "Bravo", "Charlie"]
+
+
+def test_list_items_orders_by_owner_name(client, db_session):
+    alex = make_user(db_session, email="alex-owner@example.com", full_name="Alex Owner")
+    morgan = make_user(db_session, email="morgan-owner@example.com", full_name="Morgan Owner")
+    db_session.add(Item(title="Morgan item", description=None, owner_id=morgan.id))
+    db_session.add(Item(title="Alex item", description=None, owner_id=alex.id))
+    db_session.commit()
+
+    response = client.get("/api/v1/items?ordering=full_name")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [item["owner_id"] for item in data["results"]] == [str(alex.id), str(morgan.id)]
+
+
+def test_list_items_rejects_unknown_ordering(client):
+    response = client.get("/api/v1/items?ordering=random")
+
+    assert response.status_code == 422
+    assert "Invalid ordering field" in response.json()["detail"]
+
+
+def test_list_items_search_pagination_links_keep_filter(client, db_session):
+    user = make_user(db_session, email="search-pagination@example.com")
+    for title in ["Alpha one", "Alpha two", "Alpha three"]:
+        db_session.add(Item(title=title, description=None, owner_id=user.id))
+    db_session.add(Item(title="Beta one", description=None, owner_id=user.id))
+    db_session.commit()
+
+    response = client.get("/api/v1/items?search=alpha&limit=2&offset=0")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 3
+    assert data["next"] == "http://testserver/api/v1/items?search=alpha&limit=2&offset=2"
 
 
 def test_create_item_requires_authentication(client):

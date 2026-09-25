@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,7 @@ from app.schemas.auth import TokenPair
 
 
 class AuthService:
-    def get_current_user(self, db: Session, user_id: int) -> User | None:
+    def get_current_user(self, db: Session, user_id: UUID) -> User | None:
         return UserRepository(db).get(user_id)
 
     def authenticate(self, db: Session, email: str, password: str) -> User | None:
@@ -40,7 +41,7 @@ class AuthService:
     def issue_token_pair(
         self,
         db: Session,
-        user_id: int,
+        user_id: UUID,
     ) -> TokenPair:
         refresh_token = create_refresh_token(user_id)
         refresh_payload = decode_token(refresh_token, expected_type="refresh")
@@ -60,8 +61,8 @@ class AuthService:
     def _issue_token_pair_for_family(
         self,
         db: Session,
-        user_id: int,
-        family_id: int,
+        user_id: UUID,
+        family_id: UUID,
         refresh_token: str | None = None,
     ) -> TokenPair:
         access_token = create_access_token(user_id)
@@ -77,7 +78,7 @@ class AuthService:
     def rotate_refresh_token(self, db: Session, refresh_token: str) -> TokenPair:
         try:
             payload = decode_token(refresh_token, expected_type="refresh")
-            user_id = int(payload.sub)
+            user_id = UUID(payload.sub)
         except Exception:
             raise AuthError("Invalid or expired refresh token", code=ErrorCode.AUTH_INVALID_TOKEN)
 

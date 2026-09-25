@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,12 +16,12 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
 
     def create_family(
         self,
-        user_id: int,
+        user_id: UUID,
         expires_at: datetime,
     ) -> RefreshTokenFamily:
         return self.family_repo.create(user_id=user_id, expires_at=expires_at)
 
-    def get_family(self, family_id: int) -> Optional[RefreshTokenFamily]:
+    def get_family(self, family_id: UUID) -> Optional[RefreshTokenFamily]:
         return self.db.scalar(select(RefreshTokenFamily).where(RefreshTokenFamily.id == family_id))
 
     def get_by_jti(self, jti: str) -> Optional[RefreshToken]:
@@ -28,7 +29,7 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
 
     def create(
         self,
-        family_id: int,
+        family_id: UUID,
         jti: str,
         expires_at: datetime,
     ) -> RefreshToken:

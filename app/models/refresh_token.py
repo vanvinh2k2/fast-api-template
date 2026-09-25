@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -13,9 +14,11 @@ def utc_now() -> datetime:
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    family_id: Mapped[int] = mapped_column(
-        Integer,
+    id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, index=True, default=uuid4
+    )
+    family_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
         ForeignKey("refresh_token_families.id"),
         nullable=False,
     )
@@ -33,8 +36,10 @@ class RefreshToken(Base):
 class RefreshTokenFamily(Base):
     __tablename__ = "refresh_token_families"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, index=True, default=uuid4
+    )
+    user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

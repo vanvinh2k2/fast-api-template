@@ -11,18 +11,18 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "refresh_token_families",
-        sa.Column("id", sa.Integer, primary_key=True, index=True),
-        sa.Column("user_id", sa.Integer, sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("id", sa.Uuid(), primary_key=True, index=True),
+        sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_table(
         "refresh_tokens",
-        sa.Column("id", sa.Integer, primary_key=True, index=True),
+        sa.Column("id", sa.Uuid(), primary_key=True, index=True),
         sa.Column(
             "family_id",
-            sa.Integer,
+            sa.Uuid(),
             sa.ForeignKey("refresh_token_families.id"),
             nullable=False,
         ),

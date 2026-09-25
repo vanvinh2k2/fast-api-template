@@ -1,4 +1,7 @@
+from uuid import UUID
+
 from pydantic import BaseModel
+
 from app.schemas.base import ORMModel
 
 
@@ -7,11 +10,6 @@ class ItemBase(BaseModel):
     description: str | None = None
 
 
-class ItemUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-
-
-class ItemPublic(ItemBase, ORMModel):
-    id: int
-    owner_id: int
+class ItemResponse(ItemBase, ORMModel):
+    id: UUID
+    owner_id: UUID

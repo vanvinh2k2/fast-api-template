@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import jwt
 from argon2 import PasswordHasher
@@ -15,7 +15,7 @@ JWT_AUDIENCE = "api"
 
 
 def _create_token(
-    *, user_id: int, token_type: Literal["access", "refresh"], exp_delta: timedelta
+    *, user_id: UUID, token_type: Literal["access", "refresh"], exp_delta: timedelta
 ) -> str:
     now = datetime.now(timezone.utc)
     payload = {
@@ -30,7 +30,7 @@ def _create_token(
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: UUID) -> str:
     return _create_token(
         user_id=user_id,
         token_type="access",
@@ -38,7 +38,7 @@ def create_access_token(user_id: int) -> str:
     )
 
 
-def create_refresh_token(user_id: int) -> str:
+def create_refresh_token(user_id: UUID) -> str:
     return _create_token(
         user_id=user_id,
         token_type="refresh",

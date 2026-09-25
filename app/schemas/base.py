@@ -20,10 +20,21 @@ class ApiModel(BaseModel):
 
 
 class PageParams(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     limit: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20
     offset: Annotated[int, Query(ge=0, description="Zero-based item offset")] = 0
+
+
+class ListParams(PageParams):
+    search: Annotated[
+        str | None,
+        Query(min_length=1, max_length=100, description="Search by configured fields"),
+    ] = None
+    ordering: Annotated[
+        str | None,
+        Query(min_length=1, max_length=100, description="Order by a configured field"),
+    ] = None
 
 
 class Page[T](ApiModel):
