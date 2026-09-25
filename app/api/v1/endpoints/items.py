@@ -1,16 +1,13 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, Query, Request, status
 
-from app.api.deps import get_current_user, get_db_dep
+from app.api.deps import CurrentUser, ItemServiceDep
 from app.core.exceptions import ForbiddenError, NotFoundError
-from app.models.user import User
 from app.repositories.item_repo import ItemRepository
 from app.schemas.base import ListParams, Page
 from app.schemas.item import ItemBase, ItemResponse
-from app.services.item_service import ItemService
 
 router = APIRouter()
 
@@ -23,12 +20,11 @@ router = APIRouter()
 def list_items(
     request: Request,
     params: Annotated[ListParams, Query()],
-    db: Session = Depends(get_db_dep),
+    current_user: CurrentUser,
+    service: ItemServiceDep,
 ):
-    service = ItemService()
     try:
         items, count = service.list_items(
-            db,
             offset=params.offset,
             limit=params.limit,
             search=params.search,
@@ -42,33 +38,41 @@ def list_items(
 
 @router.post("", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
 def create_item(
-    item_in: ItemBase,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db_dep),
+    payload: ItemBase,
+    current_user: CurrentUser,
+    service: ItemServiceDep,
 ):
-    service = ItemService()
     return service.create_item(
-        db,
-        title=item_in.title,
-        description=item_in.description,
+        title=payload.title,
+        description=payload.description,
         owner_id=current_user.id,
     )
 
 
-@router.put("/{item_id}", response_model=ItemResponse)
-def update_item(
-    item_id: UUID,
-    item_in: ItemBase,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db_dep),
+@router.get("/{id}", response_model=ItemResponse)
+def get_item(
+    id: UUID,
+    current_user: CurrentUser,
+    service: ItemServiceDep,
 ):
-    service = ItemService()
+    try:
+        return service.get_item(item_id=id)
+    except NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+
+@router.put("/{id}", response_model=ItemResponse)
+def update_item(
+    id: UUID,
+    payload: ItemBase,
+    current_user: CurrentUser,
+    service: ItemServiceDep,
+):
     try:
         return service.update_item(
-            db,
-            item_id=item_id,
-            title=item_in.title,
-            description=item_in.description,
+            item_id=id,
+            title=payload.title,
+            description=payload.description,
             actor=current_user,
         )
     except NotFoundError:
@@ -77,15 +81,14 @@ def update_item(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)
 
 
-@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_item(
-    item_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db_dep),
+    id: UUID,
+    current_user: CurrentUser,
+    service: ItemServiceDep,
 ):
-    service = ItemService()
     try:
-        service.delete_item(db, item_id=item_id, actor=current_user)
+        service.delete_item(item_id=id, actor=current_user)
     except ForbiddenError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail)
     return

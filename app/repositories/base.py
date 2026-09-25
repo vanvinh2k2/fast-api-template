@@ -14,7 +14,6 @@ ModelT = TypeVar("ModelT")
 class BaseRepository(Generic[ModelT]):
     list_param_names: ClassVar[set[str]] = {"limit", "offset", "search", "ordering"}
     model: ClassVar[type[Any]]
-    related_fields: ClassVar[Mapping[str, tuple[type[Any], ColumnElement[bool]]]] = {}
     field_overrides: ClassVar[Mapping[str, ColumnElement[Any]]] = {}
     search_fields: ClassVar[tuple[str, ...]] = ()
     filter_fields: ClassVar[tuple[str, ...]] = ()
@@ -34,10 +33,7 @@ class BaseRepository(Generic[ModelT]):
     def get(self, obj_id: UUID) -> ModelT | None:
         return self.db.get(self.model, obj_id)
 
-    def count(self) -> int:
-        return self.db.scalar(select(func.count()).select_from(self.model)) or 0
-
-    def count_filtered(
+    def count(
         self,
         *,
         search: str | None = None,
@@ -89,17 +85,7 @@ class BaseRepository(Generic[ModelT]):
         offset: int = 0,
         limit: int = 100,
         order_by: Any | None = None,
-    ) -> list[ModelT]:
-        stmt = select(self.model).offset(offset).limit(limit)
-        if order_by is not None:
-            stmt = stmt.order_by(order_by)
-        return list(self.db.scalars(stmt).all())
-
-    def list_filtered(
-        self,
         *,
-        offset: int = 0,
-        limit: int = 100,
         search: str | None = None,
         filters: Mapping[str, Any] | None = None,
         ordering: str | None = None,
@@ -108,10 +94,12 @@ class BaseRepository(Generic[ModelT]):
         stmt = self._apply_list_query(stmt, search=search, filters=filters, ordering=ordering)
         if ordering:
             stmt = self._apply_ordering(stmt, self.validate_ordering(ordering))
+        elif order_by is not None:
+            stmt = stmt.order_by(order_by)
         stmt = stmt.offset(offset).limit(limit)
         return list(self.db.scalars(stmt).all())
 
-    def list_with_count_filtered(
+    def list_with_count(
         self,
         *,
         offset: int = 0,
@@ -120,16 +108,22 @@ class BaseRepository(Generic[ModelT]):
         filters: Mapping[str, Any] | None = None,
         ordering: str | None = None,
     ) -> tuple[list[ModelT], int]:
-        return self.list_filtered(
+        return self.list(
             offset=offset,
             limit=limit,
             search=search,
             filters=filters,
             ordering=ordering,
-        ), self.count_filtered(search=search, filters=filters, ordering=ordering)
+        ), self.count(search=search, filters=filters, ordering=ordering)
 
     def create(self, **values: Any) -> ModelT:
         obj = self.model(**values)
+        return self.save(obj)
+
+    def update(self, obj: ModelT, **values: Any) -> ModelT:
+        for field, value in values.items():
+            if value is not None:
+                setattr(obj, field, value)
         return self.save(obj)
 
     def save(self, obj: ModelT) -> ModelT:
@@ -246,11 +240,8 @@ class BaseRepository(Generic[ModelT]):
         model = cls.model
         parts = field_name.split("__")
         for relationship_name in parts[:-1]:
-            if relationship_name in cls.related_fields:
-                model = cls.related_fields[relationship_name][0]
-            else:
-                relationship = getattr(model, relationship_name)
-                model = relationship.property.mapper.class_
+            relationship = getattr(model, relationship_name)
+            model = relationship.property.mapper.class_
         return getattr(model, parts[-1])
 
     def _apply_field_joins(self, stmt: Select, field_name: str) -> Select:
@@ -259,20 +250,16 @@ class BaseRepository(Generic[ModelT]):
 
         model = self.model
         for relationship_name in field_name.split("__")[:-1]:
-            if relationship_name in self.related_fields:
-                related_model, onclause = self.related_fields[relationship_name]
-                stmt = stmt.outerjoin(related_model, onclause)
-                model = related_model
-            else:
-                relationship = getattr(model, relationship_name)
-                stmt = stmt.outerjoin(relationship)
-                model = relationship.property.mapper.class_
+            relationship = getattr(model, relationship_name)
+            stmt = stmt.outerjoin(relationship)
+            model = relationship.property.mapper.class_
         return stmt
 
     def _apply_override_field_join(self, stmt: Select, column: ColumnElement[Any]) -> Select:
-        for related_model, onclause in self.related_fields.values():
+        for relationship in self.model.__mapper__.relationships:
+            related_model = relationship.mapper.class_
             if self._column_belongs_to_model(column, related_model):
-                return stmt.outerjoin(related_model, onclause)
+                return stmt.outerjoin(getattr(self.model, relationship.key))
         return stmt
 
     @classmethod

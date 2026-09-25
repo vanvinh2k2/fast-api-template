@@ -27,12 +27,13 @@ def auth_headers(client, db_session, email: str = "user@example.com") -> dict[st
 
 
 def test_list_items_returns_items(client, db_session):
+    headers = auth_headers(client, db_session, email="list-reader@example.com")
     user = make_user(db_session, email="list-items@example.com")
     db_session.add(Item(title="First", description=None, owner_id=user.id))
     db_session.add(Item(title="Second", description="Two", owner_id=user.id))
     db_session.commit()
 
-    response = client.get("/api/v1/items?ordering=-title")
+    response = client.get("/api/v1/items?ordering=-title", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -44,12 +45,13 @@ def test_list_items_returns_items(client, db_session):
 
 
 def test_list_items_returns_paginated_response(client, db_session):
+    headers = auth_headers(client, db_session, email="paginated-reader@example.com")
     user = make_user(db_session, email="paginated-items@example.com")
     for title in ["First", "Second", "Third"]:
         db_session.add(Item(title=title, description=None, owner_id=user.id))
     db_session.commit()
 
-    first_page = client.get("/api/v1/items?limit=2&offset=0&ordering=-title")
+    first_page = client.get("/api/v1/items?limit=2&offset=0&ordering=-title", headers=headers)
 
     assert first_page.status_code == 200
     first_data = first_page.json()
@@ -58,7 +60,7 @@ def test_list_items_returns_paginated_response(client, db_session):
     assert first_data["next"] == "http://testserver/api/v1/items?ordering=-title&limit=2&offset=2"
     assert [item["title"] for item in first_data["results"]] == ["Third", "Second"]
 
-    second_page = client.get("/api/v1/items?limit=2&offset=2&ordering=-title")
+    second_page = client.get("/api/v1/items?limit=2&offset=2&ordering=-title", headers=headers)
 
     assert second_page.status_code == 200
     second_data = second_page.json()
@@ -71,13 +73,14 @@ def test_list_items_returns_paginated_response(client, db_session):
 
 
 def test_list_items_filters_by_search(client, db_session):
+    headers = auth_headers(client, db_session, email="search-reader@example.com")
     user = make_user(db_session, email="search-items@example.com", full_name="Casey Owner")
     db_session.add(Item(title="Alpha notebook", description="Paper notes", owner_id=user.id))
     db_session.add(Item(title="Beta pencil", description="Graphite sketching", owner_id=user.id))
     db_session.add(Item(title="Gamma folder", description="Plain documents", owner_id=user.id))
     db_session.commit()
 
-    response = client.get("/api/v1/items?search=alpha")
+    response = client.get("/api/v1/items?search=alpha", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -86,13 +89,14 @@ def test_list_items_filters_by_search(client, db_session):
 
 
 def test_list_items_filters_by_owner_name(client, db_session):
+    headers = auth_headers(client, db_session, email="owner-search-reader@example.com")
     owner = make_user(db_session, email="owner-search@example.com", full_name="Morgan Fields")
     other = make_user(db_session, email="other-search@example.com", full_name="Jordan Rivers")
     db_session.add(Item(title="Notebook", description=None, owner_id=owner.id))
     db_session.add(Item(title="Notebook", description=None, owner_id=other.id))
     db_session.commit()
 
-    response = client.get("/api/v1/items?search=morgan")
+    response = client.get("/api/v1/items?search=morgan", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -101,12 +105,13 @@ def test_list_items_filters_by_owner_name(client, db_session):
 
 
 def test_list_items_orders_by_title(client, db_session):
+    headers = auth_headers(client, db_session, email="order-title-reader@example.com")
     user = make_user(db_session, email="order-title@example.com")
     for title in ["Charlie", "Bravo", "Alpha"]:
         db_session.add(Item(title=title, description=None, owner_id=user.id))
     db_session.commit()
 
-    response = client.get("/api/v1/items?ordering=title")
+    response = client.get("/api/v1/items?ordering=title", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -114,34 +119,45 @@ def test_list_items_orders_by_title(client, db_session):
 
 
 def test_list_items_orders_by_owner_name(client, db_session):
+    headers = auth_headers(client, db_session, email="owner-order-reader@example.com")
     alex = make_user(db_session, email="alex-owner@example.com", full_name="Alex Owner")
     morgan = make_user(db_session, email="morgan-owner@example.com", full_name="Morgan Owner")
     db_session.add(Item(title="Morgan item", description=None, owner_id=morgan.id))
     db_session.add(Item(title="Alex item", description=None, owner_id=alex.id))
     db_session.commit()
 
-    response = client.get("/api/v1/items?ordering=full_name")
+    response = client.get("/api/v1/items?ordering=full_name", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
     assert [item["owner_id"] for item in data["results"]] == [str(alex.id), str(morgan.id)]
 
 
-def test_list_items_rejects_unknown_ordering(client):
-    response = client.get("/api/v1/items?ordering=random")
+def test_list_items_requires_authentication(client):
+    response = client.get("/api/v1/items")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Missing Authorization header"
+
+
+def test_list_items_rejects_unknown_ordering(client, db_session):
+    headers = auth_headers(client, db_session, email="invalid-order-reader@example.com")
+
+    response = client.get("/api/v1/items?ordering=random", headers=headers)
 
     assert response.status_code == 422
     assert "Invalid ordering field" in response.json()["detail"]
 
 
 def test_list_items_search_pagination_links_keep_filter(client, db_session):
+    headers = auth_headers(client, db_session, email="search-pagination-reader@example.com")
     user = make_user(db_session, email="search-pagination@example.com")
     for title in ["Alpha one", "Alpha two", "Alpha three"]:
         db_session.add(Item(title=title, description=None, owner_id=user.id))
     db_session.add(Item(title="Beta one", description=None, owner_id=user.id))
     db_session.commit()
 
-    response = client.get("/api/v1/items?search=alpha&limit=2&offset=0")
+    response = client.get("/api/v1/items?search=alpha&limit=2&offset=0", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -186,6 +202,42 @@ def test_create_item_validates_required_title(client, db_session):
     )
 
     assert response.status_code == 422
+
+
+def test_get_item_returns_item_detail(client, db_session):
+    headers = auth_headers(client, db_session, email="detail-reader@example.com")
+    user = make_user(db_session, email="detail-owner@example.com")
+    item = Item(title="Detail item", description="Single item", owner_id=user.id)
+    db_session.add(item)
+    db_session.commit()
+
+    response = client.get(f"/api/v1/items/{item.id}", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == str(item.id)
+    assert data["title"] == "Detail item"
+    assert data["description"] == "Single item"
+    assert data["owner_id"] == str(user.id)
+
+
+def test_get_item_requires_authentication(client):
+    response = client.get("/api/v1/items/00000000-0000-0000-0000-000000000000")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Missing Authorization header"
+
+
+def test_get_item_returns_404_for_missing_item(client, db_session):
+    headers = auth_headers(client, db_session, email="missing-detail-reader@example.com")
+
+    response = client.get(
+        "/api/v1/items/00000000-0000-0000-0000-000000000000",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Item not found"
 
 
 def test_update_item_allows_owner(client, db_session):
