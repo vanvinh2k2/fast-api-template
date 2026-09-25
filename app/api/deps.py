@@ -1,19 +1,44 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.security import decode_token
 from app.core.database import get_db
+from app.core.security import decode_token
 from app.models.user import User
+from app.repositories.item_repo import ItemRepository
+from app.repositories.refresh_token_repo import RefreshTokenRepository
+from app.repositories.user_repo import UserRepository
 from app.services.auth_service import AuthService
+from app.services.item_service import ItemService
 
 bearer = HTTPBearer(auto_error=False)
 
 
 def get_db_dep(db: Session = Depends(get_db)) -> Session:
     return db
+
+
+SessionDep = Annotated[Session, Depends(get_db_dep)]
+
+
+def get_auth_service(session: SessionDep) -> AuthService:
+    return AuthService(
+        UserRepository(session),
+        RefreshTokenRepository(session),
+    )
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+
+def get_item_service(session: SessionDep) -> ItemService:
+    return ItemService(ItemRepository(session))
+
+
+ItemServiceDep = Annotated[ItemService, Depends(get_item_service)]
 
 
 def get_current_user_id(
@@ -44,11 +69,10 @@ def get_current_user_id(
 
 
 def get_current_user(
-    db: Session = Depends(get_db_dep),
+    service: AuthServiceDep,
     user_id: UUID = Depends(get_current_user_id),
 ) -> User:
-    service = AuthService()
-    user = service.get_current_user(db, user_id)
+    user = service.get_current_user(user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,3 +84,8 @@ def get_current_user(
             detail="User inactive",
         )
     return user
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
+RequireAuth = Depends(get_current_user)
