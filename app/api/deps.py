@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_token
 from app.core.database import get_db
 from app.models.user import User
-from app.services.user_service import UserService
+from app.services.auth_service import AuthService
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -45,7 +45,7 @@ def get_current_user(
     db: Session = Depends(get_db_dep),
     user_id: int = Depends(get_current_user_id),
 ) -> User:
-    service = UserService()
+    service = AuthService()
     user = service.get_current_user(db, user_id)
     if not user:
         raise HTTPException(

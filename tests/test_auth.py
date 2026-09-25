@@ -1,4 +1,5 @@
 import jwt
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.models.refresh_token import RefreshToken, RefreshTokenFamily
@@ -51,11 +52,42 @@ def test_inactive_user_cannot_login(client, db_session):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": "inactive@example.com", "password": "secret"},
+        json={"email": "inactive@example.com", "password": "secret"},
     )
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Incorrect email or password"
+
+
+def test_register_rejects_duplicate_email(client, db_session):
+    make_user(db_session, email="taken@example.com")
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "taken@example.com",
+            "full_name": "Taken User",
+            "password": "Secret123!",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Email already registered"
+
+
+def test_register_rejects_weak_password(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "weak-password@example.com",
+            "full_name": "Weak Password",
+            "password": "secret123",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Password must contain an uppercase letter" in response.text
 
 
 def test_inactive_user_cannot_use_existing_access_token(client, db_session):
@@ -68,7 +100,7 @@ def test_inactive_user_cannot_use_existing_access_token(client, db_session):
     db_session.commit()
 
     response = client.get(
-        "/api/v1/users/me",
+        "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {access}"},
     )
 
@@ -142,7 +174,7 @@ def test_login_stores_refresh_token_family(client, db_session):
         audience="api",
     )
 
-    token = db_session.query(RefreshToken).filter(RefreshToken.jti == payload["jti"]).one()
+    token = db_session.scalars(select(RefreshToken).where(RefreshToken.jti == payload["jti"])).one()
     family = db_session.get(RefreshTokenFamily, token.family_id)
 
     assert family is not None
